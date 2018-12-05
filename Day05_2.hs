@@ -18,7 +18,11 @@ react = reverse . foldl rule ""
     sameCharacter a b = toUpper a == toUpper b
 
 calc :: String -> Int
-calc = length . react
+calc input = minimum things
+  where
+    letters = ['a'..'z']
+    inputWithout c = filter ((/=c) . toLower) input
+    things = map (length . react . inputWithout) letters
 
 main :: IO ()
 main = do
