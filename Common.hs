@@ -7,6 +7,9 @@ import qualified Data.Vector as Vector
 loadDo :: ([String] -> a) -> String -> IO a
 loadDo calc path = calc . lines <$> readFile path
 
+loadDoPrint :: Show a => ([String] -> a) -> String -> IO ()
+loadDoPrint calc path = show . calc . lines <$> readFile path >>= putStrLn
+
 count :: Eq a => a -> [a] -> Int
 count n = length . filter (==n)
 
