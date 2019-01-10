@@ -1,10 +1,11 @@
+{-# LANGUAGE BangPatterns #-}
 import Data.List.Zipper
 
 type Marble = Int
 type Score = Int
 type Board = Zipper Marble
 data Player = Player Int Score
-data GameState = GameState [Player] Board Marble
+data GameState = GameState ![Player] !Board !Marble
 
 instance Show Player where
   show (Player id score) = "P" ++ show id ++ ": " ++ show score
@@ -19,7 +20,7 @@ initialState playerNumber = GameState players board 1
     players = map (\i -> Player i 0) [1 .. playerNumber]
 
 proceed :: GameState -> GameState
-proceed (GameState players board currentMarble) = GameState players' board' (currentMarble + 1)
+proceed !(GameState players board currentMarble) = GameState players' board' (currentMarble + 1)
   where
     currentPlayer = head players
     players' = tail players ++ [currentPlayer']
@@ -78,7 +79,12 @@ problem playerNumber marbles =
     scoreOf (Player _ score) = score
 
 main :: IO ()
-main = putStrLn . show $ problem players lastMarble
+main = do
+  putStrLn "Running the program. Brace yourself."
+  putStrLn . show $ problem players lastMarble
+  putStrLn "Done! OMG it wasn't easy for me, phew."
+  hurray <- getLine
+  putStrLn $ "As you said, " ++ hurray
   where
     players = 459
-    lastMarble = 71790
+    lastMarble = 7179000
