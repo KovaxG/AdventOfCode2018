@@ -1,67 +1,84 @@
-import Debug.Trace
+import Data.List.Zipper
 
-type Player = Int
 type Marble = Int
 type Score = Int
-data Game = Game Marble Marble [Marble] [(Player, Score)] deriving (Show)
+type Board = Zipper Marble
+data Player = Player Int Score
+data GameState = GameState [Player] Board Marble
 
-myShow :: Game -> String
-myShow (Game _ current marbles players) =
-  show (last players) ++ " - " ++ concat marblesString
+instance Show Player where
+  show (Player id score) = "P" ++ show id ++ ": " ++ show score
+
+instance Show GameState where
+  show (GameState players board marble) = show players ++ show (toList board)
+
+initialState :: Int -> GameState
+initialState playerNumber = GameState players board 1
   where
-    marblesString = map (\m ->
-      if m == current
-      then "(" ++ show m ++ ") "
-      else show m ++ " ") (rotateToZero allMarbles)
-    allMarbles = current : marbles
-    rotateToZero ms@(0:_) = ms
-    rotateToZero ms = rotateToZero (rotateCW ms)
+    board = fromList [0]
+    players = map (\i -> Player i 0) [1 .. playerNumber]
 
-startPlayers :: Int -> [(Player, Score)]
-startPlayers n = map (\p -> (p,0)) [1..n]
-
-start = Game 1 1 [0] $ startPlayers 10
-
-next :: Game -> Game
-next (Game mn current marbles players) = Game mnp nextMarble newMarbles newPlayers
+proceed :: GameState -> GameState
+proceed (GameState players board currentMarble) = GameState players' board' (currentMarble + 1)
   where
-    mnp = mn + 1
-    newPlayers = tail players ++ [newPlayer]
-    (playerId, score) = head players
-    newPlayer = (playerId, score + extraScore)
-    (nextMarble, newMarbles, extraScore) =
-      if mnp `mod` 23 == 0
-      then extraCase
-      else normalCase
+    currentPlayer = head players
+    players' = tail players ++ [currentPlayer']
 
-    normalCase :: (Marble, [Marble], Score)
+    (currentPlayer', board') =
+      if mod currentMarble 23 == 0
+        then extraCase (currentPlayer, board)
+        else (currentPlayer, normalCase board)
+
+    normalCase :: Board -> Board
     normalCase =
-      let nextMarble = mnp
-          newMarbles = repeatN (length marbles) rotateCW (current : marbles)
-      in (nextMarble, newMarbles, 0)
+      insert currentMarble
+      . clockwise
+      . clockwise
 
-    extraCase :: (Marble, [Marble], Score)
-    extraCase =
-      let extraScore = mnp
-          sevenBack = repeatN 8 rotateCW (current : marbles)
-          asd = head sevenBack -- by evaluating this the algorithm dies
-          nextMarble = last $ take 2 sevenBack
-          rest = drop 2 sevenBack
-      in trace (show mnp ++ " " ++ show (extraScore)) (nextMarble, rest, extraScore)
+    extraCase :: (Player, Board) -> (Player, Board)
+    extraCase (player, board) = (addScore player, board')
+      where
+        addScore (Player id score) = Player id (score + currentMarble + extraScore)
+        (board', extraScore) =
+               (\b -> (delete b, cursor b))
+               . counterClockwise
+               . counterClockwise
+               . counterClockwise
+               . counterClockwise
+               . counterClockwise
+               . counterClockwise
+               $ counterClockwise board
 
-rotateCW :: [a] -> [a]
-rotateCW [] = []
-rotateCW as = last as : init as
+clockwise :: Zipper a -> Zipper a
+clockwise z
+  | endp (right z) = start z
+  | otherwise = right z
 
-repeatN :: Int -> (a -> a) -> a -> a
-repeatN (-1) _ a = a
-repeatN 0 _ a = a
-repeatN n f z = foldl (\a _ -> f a) z [1..n]
+counterClockwise :: Zipper a -> Zipper a
+counterClockwise z
+  | beginp (left z)  && beginp z = left $ end z
+  | otherwise = left z
 
-getMaxScore :: Game -> Score
-getMaxScore (Game _ _ _ players) = maximum $ map snd players
+playGame :: Int -> Int -> GameState
+playGame marbles playerNumber = go startState
+  where
+    startState = initialState playerNumber
+    go state@(GameState _ _ currentMarble)
+      | currentMarble == marbles = state
+      | otherwise = go (proceed state)
+
+problem :: Int -> Int -> Int
+problem playerNumber marbles =
+  maximum
+  . map scoreOf
+  . players
+  $ playGame marbles playerNumber
+  where
+    players (GameState ps _ _) = ps
+    scoreOf (Player _ score) = score
 
 main :: IO ()
-main = do
-  let endGame = repeatN 1619 next start
-  putStrLn . show $ getMaxScore endGame
+main = putStrLn . show $ problem players lastMarble
+  where
+    players = 459
+    lastMarble = 71790
