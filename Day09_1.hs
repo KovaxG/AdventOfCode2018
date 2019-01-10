@@ -44,10 +44,10 @@ next (Game mn current marbles players) = Game mnp nextMarble newMarbles newPlaye
     extraCase =
       let extraScore = mnp
           sevenBack = repeatN 8 rotateCW (current : marbles)
-          asd = head sevenBack
+          asd = head sevenBack -- by evaluating this the algorithm dies
           nextMarble = last $ take 2 sevenBack
           rest = drop 2 sevenBack
-      in trace (show mnp ++ " " ++ show (extraScore + asd)) (nextMarble, rest, extraScore + asd)
+      in trace (show mnp ++ " " ++ show (extraScore)) (nextMarble, rest, extraScore)
 
 rotateCW :: [a] -> [a]
 rotateCW [] = []
